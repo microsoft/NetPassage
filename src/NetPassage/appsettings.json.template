@@ -1,0 +1,10 @@
+﻿{
+  "App": {
+    "Name": "NetPassage",
+    "Author": "Microsoft",
+    "Version": "1.0.0",
+    "MessageRows": 10,
+    "LeftPad": 50,
+    "MidPad":  20
+  }
+}

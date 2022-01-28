@@ -1,0 +1,19 @@
+{
+  "Relay": {
+    "Mode": "<http> | <websocket>"
+  },
+  "Http": {
+    "Namespace": "<Azure Relay namespace>",
+    "ConnectionName": "<Http Hybrid Connection Name>",
+    "PolicyName": "<Http Hybrid Connection Policy Name>",
+    "PolicyKey": "<Http Hybrid Connection Policy Key>",
+    "TargetServiceAddress": "<Target URL>"
+  },
+  "WebSocket": {
+    "Namespace": "<Azure Relay namespace>",
+    "ConnectionName": "<WebSocket Hybrid Connection Name>",
+    "PolicyName": "<WebSocket Hybrid Connection Policy Name>",
+    "PolicyKey": "<WebSocket Hybrid Connection Policy Key>",
+    "TargetServiceAddress": "<Target URL>"
+  }
+}
