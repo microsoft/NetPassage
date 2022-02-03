@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: detect-secrets
+        name: Check for secrets
+        entry: scripts/detect_secrets.sh
+        language: script
+        types: [file]
+        pass_filenames: false

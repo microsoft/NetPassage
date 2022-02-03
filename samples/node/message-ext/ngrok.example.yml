@@ -1,0 +1,6 @@
+authtoken: <ngrok-authentication-token>
+tunnels:
+  bot:
+    proto: http
+    addr: 3978
+    hostname: <alias>-message-extension-bot.ngrok.io

@@ -1,8 +1,13 @@
-﻿using Microsoft.Azure.Relay;
+﻿using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Azure.Relay;
+using Microsoft.HybridConnections.Core.Extensions;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -67,7 +72,14 @@ namespace Microsoft.HybridConnections.Core
 
             var relativePath = context.Request.Url.GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped);
             relativePath = relativePath.Replace($"/{connectionName}/", string.Empty, StringComparison.OrdinalIgnoreCase);
-            requestMessage.RequestUri = new Uri(relativePath, UriKind.RelativeOrAbsolute);
+            if (relativePath.Length > 0)
+            {
+                requestMessage.RequestUri = new Uri(relativePath, UriKind.RelativeOrAbsolute);
+            }
+            else
+            {
+                requestMessage.RequestUri = new Uri("http://localhost:3978");
+            }
             requestMessage.Method = new HttpMethod(context.Request.HttpMethod);
 
             foreach (var headerName in context.Request.Headers.AllKeys)
@@ -75,12 +87,15 @@ namespace Microsoft.HybridConnections.Core
                 if (string.Equals(headerName, "Host", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(headerName, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Don't flow these headers here
-                    continue;
+                        // Don't flow these headers here
+                        continue;
                 }
 
                 requestMessage.Headers.Add(headerName, context.Request.Headers[headerName]);
             }
+
+            // requestMessage.Headers.Add("Content-Type", "text/html; charset=UTF-8; X-Content-Type-Options=nosniff");
+            // requestMessage.Headers.Add("Transfer-Encoding", "chunked");
 
             await Logger.LogRequestActivityAsync(requestMessage);
 
@@ -97,13 +112,17 @@ namespace Microsoft.HybridConnections.Core
         /// <param name="context"></param>
         /// <param name="responseMessage"></param>
         /// <returns></returns>
-        public static async Task SendResponseAsync(RelayedHttpListenerContext context, HttpResponseMessage responseMessage)
+        public static async Task<long> SendResponseAsync(RelayedHttpListenerContext context, HttpResponseMessage responseMessage)
         {
             context.Response.StatusCode = responseMessage.StatusCode;
             context.Response.StatusDescription = responseMessage.ReasonPhrase;
-            foreach (var header in responseMessage.Headers)
+            var headerList = new List<string>();
+            foreach (KeyValuePair<string, IEnumerable<string>> header in responseMessage.Headers)
             {
-                if (string.Equals(header.Key, "Transfer-Encoding"))
+                headerList.Add(header.Key);
+                if (string.Equals(header.Key, "Transfer-Encoding") 
+                    || string.Equals(header.Key, "Keep-Alive")
+                    )
                 {
                     continue;
                 }
@@ -111,8 +130,13 @@ namespace Microsoft.HybridConnections.Core
                 context.Response.Headers.Add(header.Key, string.Join(",", header.Value));
             }
 
+            // To support Web page rendering
+            context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
+
             var responseStream = await responseMessage.Content.ReadAsStreamAsync();
             await responseStream.CopyToAsync(context.Response.OutputStream);
+
+            return responseStream.Length;
         }
 
 

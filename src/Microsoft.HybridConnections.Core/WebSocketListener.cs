@@ -1,20 +1,15 @@
-﻿using Microsoft.Azure.Relay;
-using Microsoft.ServiceBusBotRelay.Core.Extensions;
-using System;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
-
+﻿
 namespace Microsoft.HybridConnections.Core
 {
+    using Microsoft.Azure.Relay;
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     public class WebSocketListener
     {
         private readonly HybridConnectionListener _listener;
-
-        public CancellationTokenSource CTS { get; set; }
+        private CancellationTokenSource _cancellationTokenSource { get; set; }
 
         /// <summary>
         /// The constructor
@@ -22,20 +17,61 @@ namespace Microsoft.HybridConnections.Core
         /// <param name="relayNamespace"></param>
         /// <param name="connectionName"></param>
         /// <param name="keyName"></param>
-        /// <param name="key"></param>
+        /// <param name="keyValue"></param>
+        /// <param name="requestHandler"></param>
         /// <param name="eventHandler"></param>
         /// <param name="cts"></param>
-        public WebSocketListener(string relayNamespace, string connectionName, string keyName, string key, Action<string> eventHandler, CancellationTokenSource cts)
+        public WebSocketListener(string relayNamespace, string connectionName, string keyName, string keyValue, 
+            Action<RelayedHttpListenerContext> requestHandler, Action<string> eventHandler, CancellationTokenSource cts)
         {
-            CTS = cts;
+            if (string.IsNullOrEmpty(relayNamespace))
+            {
+                throw new ArgumentException($"'{nameof(relayNamespace)}' cannot be null or empty.", nameof(relayNamespace));
+            }
 
-            var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(keyName, key);
-            _listener = new HybridConnectionListener(new Uri($"sb://{relayNamespace}/{connectionName}"), tokenProvider);
+            if (string.IsNullOrEmpty(connectionName))
+            {
+                throw new ArgumentException($"'{nameof(connectionName)}' cannot be null or empty.", nameof(connectionName));
+            }
+
+            if (string.IsNullOrEmpty(keyName))
+            {
+                throw new ArgumentException($"'{nameof(keyName)}' cannot be null or empty.", nameof(keyName));
+            }
+
+            if (string.IsNullOrEmpty(keyValue))
+            {
+                throw new ArgumentException($"'{nameof(keyValue)}' cannot be null or empty.", nameof(keyValue));
+            }
+
+            if (requestHandler is null)
+            {
+                throw new ArgumentNullException(nameof(requestHandler));
+            }
+
+            if (eventHandler is null)
+            {
+                throw new ArgumentNullException(nameof(eventHandler));
+            }
+
+            if (cts is null)
+            {
+                throw new ArgumentNullException(nameof(cts));
+            }
+
+            _cancellationTokenSource = cts;
+
+            var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(keyName, keyValue);
+            this._listener = new HybridConnectionListener(new Uri($"sb://{relayNamespace}/{connectionName}"), tokenProvider);
+
+            // Subscribe to the request handler - the main processing flow
+            this._listener.RequestHandler = (context) => requestHandler(context);
 
             // Subscribe to the status events.
-            _listener.Connecting += (o, e) => { eventHandler("connecting"); };
-            _listener.Offline += (o, e) => { eventHandler("offline"); };
-            _listener.Online += (o, e) => { eventHandler("online"); };
+            this._listener.Connecting += (o, e) => { eventHandler("connecting"); };
+            this._listener.Offline += (o, e) => { eventHandler("offline"); };
+            this._listener.Online += (o, e) => { eventHandler("online"); };
+           
         }
 
         /// <summary>
@@ -46,12 +82,12 @@ namespace Microsoft.HybridConnections.Core
         /// <returns></returns>
         public async Task OpenAsync()
         {
-            await _listener.OpenAsync(CTS.Token);
+            await _listener.OpenAsync(_cancellationTokenSource.Token);
 
             // trigger cancellation when the user presses enter. Not awaited.
 #pragma warning disable CS4014
-            CTS.Token.Register(() => _listener.CloseAsync(CancellationToken.None));
-            Task.Run(() => Console.In.ReadLineAsync().ContinueWith((s) => { CTS.Cancel(); }));
+            _cancellationTokenSource.Token.Register(() => _listener.CloseAsync(CancellationToken.None));
+            // Task.Run(() => Console.In.ReadLineAsync().ContinueWith((s) => { _cancellationTokenSource.Cancel(); }));
 #pragma warning restore CS4014
         }
 
@@ -61,8 +97,9 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="relayProcessHandler"></param>
         /// <returns></returns>
-        public async Task ListenAsync(Action<HybridConnectionStream, CancellationTokenSource> relayProcessHandler)
+        public async Task ListenAsync(Action<RelayedHttpListenerContext> relayProcessHandler)
         {
+            // Initiate the connection and process messages
             while (true)
             {
                 // Accept the next available, pending connection request.
@@ -79,16 +116,16 @@ namespace Microsoft.HybridConnections.Core
                 // this call, but rather let the task handling the connection
                 // run out on its own without holding for it
 #pragma warning disable CS4014
-                Task.Run(() =>
-                {
-                    // Initiate the connection and process messages
-                    relayProcessHandler(relayConnection, CTS);
-                });
+                //Task.Run(() =>
+                //{
+                //    // Initiate the connection and process messages
+                //    this._listener.RequestHandler = (context) => relayProcessHandler(context);
+                //});
 #pragma warning restore CS4014
             }
 
             // close the listener after we exit the processing loop
-            await _listener.CloseAsync(CTS.Token);
+            await _listener.CloseAsync(_cancellationTokenSource.Token);
         }
 
 
@@ -100,7 +137,16 @@ namespace Microsoft.HybridConnections.Core
         /// <returns></returns>
         public Task CloseAsync()
         {
-            return _listener.CloseAsync(CTS.Token);
+            return _listener.CloseAsync(_cancellationTokenSource.Token);
+        }
+
+        /// <summary>
+        /// Returns true if the connection cancellation has been requested
+        /// </summary>
+        /// <returns></returns>
+        public bool IsCancellationRequested()
+        {
+            return _cancellationTokenSource.IsCancellationRequested;
         }
     }
 }

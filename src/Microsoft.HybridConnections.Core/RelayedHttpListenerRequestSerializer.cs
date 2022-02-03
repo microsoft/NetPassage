@@ -18,9 +18,9 @@ namespace Microsoft.HybridConnections.Core
         /// <returns></returns>
         public static async Task<string> SerializeAsync(RelayedHttpListenerRequest request)
         {
-            var requestMessage = new RequestMessage
+            var requestMessage = new SerializableRequestMessage
             {
-                Content = await (new StreamContent(request.InputStream)).ReadAsByteArrayAsync(),
+                Content = await (new StreamContent(request.InputStream)).ReadAsStringAsync(),
                 HttpMethod = request.HttpMethod,
                 RemoteEndPoint = request.RemoteEndPoint.Address.ToString(),
                 Url = request.Url.AbsoluteUri,
@@ -44,11 +44,11 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public static async Task<string> SerializeAsync(HttpRequestMessage request)
+        public static async Task<string> SerializeRequestAsync(HttpRequestMessage request)
         {
-            var requestMessage = new RequestMessage
+            var requestMessage = new SerializableRequestMessage
             {
-                Content = await request.Content.ReadAsByteArrayAsync(),
+                Content = request.Content != null ? await request.Content.ReadAsStringAsync() : null,
                 HttpMethod = request.Method.Method,
                 RemoteEndPoint = request.RequestUri.ToString(),
                 Url = request.RequestUri.ToString()
@@ -76,13 +76,13 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="jsonObject"></param>
         /// <returns></returns>
-        public static HttpRequestMessage Deserialize(string jsonObject)
+        public static HttpRequestMessage DeserializeRequest(string jsonObject)
         {
-            var serializedRequestMessage = JsonConvert.DeserializeObject<RequestMessage>(jsonObject);
+            var serializedRequestMessage = JsonConvert.DeserializeObject<SerializableRequestMessage>(jsonObject);
 
             var requestMessage = new HttpRequestMessage();
             // Get message content
-            requestMessage.Content = new ByteArrayContent(serializedRequestMessage.Content);
+            requestMessage.Content = new StringContent(serializedRequestMessage.Content);
 
             // populate Headers
             foreach (var header in serializedRequestMessage.Headers)
@@ -104,6 +104,34 @@ namespace Microsoft.HybridConnections.Core
             return requestMessage;
 
         }
+
+        /// <summary>
+        /// Serialize HttpResponseMessage
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns></returns>
+        public static async Task<string> SerializeResponseAsync(HttpResponseMessage response)
+        {
+            var responseMessage = new SerializableResponseMessage
+            {
+                Content = await response.Content?.ReadAsStringAsync(),
+                ReasonPhrase = response.ReasonPhrase,
+                StatusCode = response.StatusCode.ToString(),
+                requestMessage = await SerializeRequestAsync(response.RequestMessage),
+                IsSuccessStatusCode = response.IsSuccessStatusCode,
+            };
+
+            // populate Headers
+            foreach (var header in response.Headers)
+            {
+                responseMessage.Headers = responseMessage.Headers ?? new List<KeyValuePair<string, IEnumerable<string>>>();
+                ((List<KeyValuePair<string, IEnumerable<string>>>)responseMessage.Headers)
+                    .Add(new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value));
+            }
+
+            return JsonConvert.SerializeObject(responseMessage);
+        }
+
 
         /// <summary>
         /// Validates the Json string

@@ -142,7 +142,7 @@ namespace Microsoft.HybridConnections.Core
         {
             if (!IsVerboseLogs) return;
 
-            var activityRequest = RelayedHttpListenerRequestSerializer.Deserialize(messageSent);
+            var activityRequest = RelayedHttpListenerRequestSerializer.DeserializeRequest(messageSent);
             await LogRequestActivityAsync(activityRequest);
         }
 
