@@ -87,9 +87,11 @@ When building the solution on Mac, the steps are largely the same as shown above
     d. Select **OK** and retry running `NetPassage` via Visual Studio for Mac.
 
 
-### Note about the static web pages
+### Note about response message headers
 
-If the client requires the static web page to be returned with the request, they should always add the following header to the response message: `Content-Type: "text/html; charset=UTF-8"`.
+By default, NetPassage adds the following header to all response messages in order to support rendering web page responses: `Content-Type: "text/html; charset=UTF-8"`.
+
+This may impact scenarios where the client may want to instead return other content-types (e.g. pure JSON documents). 
 
 ## Acknowledgments
 
