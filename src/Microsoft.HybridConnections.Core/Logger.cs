@@ -1,13 +1,27 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="Logger.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
 
 namespace Microsoft.HybridConnections.Core
 {
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+
     public static class Logger
     {
         public static List<string> Logs { get; private set; } = new List<string>();
@@ -25,7 +39,7 @@ namespace Microsoft.HybridConnections.Core
         /// <param name="message"></param>
         public static void LogRequest(string requestType, string requestAddress, string statusCode, string message)
         {
-            var leftSection = $"{DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture)}: {requestType}   {requestAddress}";
+            var leftSection = $"{DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture)} {requestType}   {requestAddress}";
             var filler = string.Empty.PadRight((LeftPad - leftSection.Length > 0 ? LeftPad - leftSection.Length : 0) + MidPad);
 
             Logs.Add($"{leftSection}{filler}{statusCode}  {message}");
@@ -142,7 +156,7 @@ namespace Microsoft.HybridConnections.Core
         {
             if (!IsVerboseLogs) return;
 
-            var activityRequest = RelayedHttpListenerRequestSerializer.Deserialize(messageSent);
+            var activityRequest = RelayedHttpListenerRequestSerializer.DeserializeRequest(messageSent);
             await LogRequestActivityAsync(activityRequest);
         }
 

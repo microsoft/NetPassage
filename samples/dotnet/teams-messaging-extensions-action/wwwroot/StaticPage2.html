@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Microsoft Teams ME Action StaticPage</title>
+    <script>
+            window.onload = function() {
+                let displayMessage = "Hello from .NET web app!";
+                let dateTime = new Date();
+                let currentDate = `${dateTime.toDateString()}`;
+                let currentTime = `${dateTime.getHours()}:${dateTime.getMinutes()}:${dateTime.getSeconds()}`;
+                let displayTime = ` Today is ${currentDate} and time is ${currentTime}`;
+                document.getElementById("display_message").innerHTML = displayMessage;
+                document.getElementById("display_time").innerHTML = displayTime;
+            }
+    </script>
+    <style>
+        #display_time {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div style="font-family: 'Segoe UI'">
+        <p id="display_time"></p>
+        <p id="display_message"></p>
+    </div>
+</body>
+</html>

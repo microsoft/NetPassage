@@ -5,6 +5,9 @@
     "Version": "1.0.0",
     "MessageRows": 10,
     "LeftPad": 50,
-    "MidPad":  20
+    "MidPad": 20
+  },
+  "Log": {
+    "Verbose": false | true
   }
 }

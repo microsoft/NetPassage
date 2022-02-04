@@ -1,8 +1,12 @@
 # Overview
 
-**NetPassage** allows you to expose a web service, such as Microsoft Bot running on your local machine or on the private network to the public cloud endpoint, such as Bot Channel Registration Messaging endpoint, for example, via Azure Service Bus Relay.
+**NetPassage** is a secure, open-protocol utility that enhances the existing Azure Relay features that allow exposing any web server or Bot application running on your local machine to the internet service, such as Microsoft Teams or any cloud based web applications. This tool is built with the latest .NET Core 6.0 platform and can be installed and run on any platform that have a basic WebSocket capability. **NetPassage** is based on HTTP and WebSockets. It does not have any dependency on WCF.
 
-This client side utility supports both `Http` and `WebSocket` connectivity with the cloud based Relay.
+**NetPassage** supports network load balancing without the need of additional appliance. As the Relay resides at the cloud environment, we can have multiple listeners and the Network will be load balanced based on round robin fashion and you get a secured connectivity without requiring any external VPN. Additionally, **NetPassage** has also ability to listen simultenously to multiple client connections on a single hybrid connection, but the total number of listeners is limited to 25 listeners. Therefore you are only limited to the maximum number of hybrid connections you can add to your Azure Relay Namespace.
+
+Altogether, an interesting thing is that it is hybrid and supports cross platform which can run on Windows, Linux, .Net Platform, Java, Node.js etc.
+
+This client side utility supports both `Http(s)` and `WebSocket` connectivity with the cloud based Relay.
 
 It is useful for debug scenarios or for more complex situations where the BotEmulator is not enough (i.e.: you use the WebChat control hosted on a site and you need to receive ChannelData in your requests).
 
@@ -24,76 +28,47 @@ shown in the architecture diagram below:
 The `NetPassage` utility is constructed from the following parts:
 
 1. NetPassage client console app
-2. Microsoft.HybridConnectionsRelay a server side job (deployed to Azure)
-3. Microsoft.HybridConnections.Core
+2. Microsoft.HybridConnections.Core - the library containing the common modules and services used by NetPassage
 
-### Building with Microsoft Visual Studio 2019
+### Building with Microsoft Visual Studio 2019 or higher
 
->Note: If you plan on using only Http tunnel protocol, then you would only need to build the NetPassage and Microsoft.HybridConnections.Core projects. Then you would start NetPassage project only.
-
-1. Once the solution has been cloned to your machine, open the solution in Visual Studio.
+1. Once the github repository has been cloned or forked to your machine, open the `NetPassage` solution in Visual Studio.
 
 2. In Solution Explorer, expand the **NetPassage** folder.
 
-3. Clone the **NetPassage.json.template** file into **NetPassage.json** and replace the following values with those from your Azure Service
-Bus.
+3. Clone the **NetPassage.json.template** file into **NetPassage.json** and replace the following values with those from your Azure Relay settings.
 
-    a. `Namespace` is the name of your Azure Service Bus Relay. Enter the same value for both Http and Websocket sections.
+    a. `Namespace` is the name of your Azure Relay service.
+    >Note: Depending on the number of connections you might have, the following settings in the **ConnectionSettings** section should be completed for each individual hybrid connection.
 
-    b. Under **Http** section, `ConnectionName` is the name of the Hybrid Connection used for Http relay. And Under **Websocket** section, `ConnectionName`  is the name of the Hybrid Connection used for Websocket relay.
+    b.`HybridConnection` is the name of the Hybrid Connection.
+    c. `PolicyName` is the name of the shared access policy.
+    d. `PolicyKey` is the secret key value for the shared access policy.
+    e. `TargetHttp` is the localhost url address to your local service (e.g. Bot, web app, etc...) The address and port number should match the address and port used by your local client. For example, `http://localhost:[PORT]`.
 
-    c. "PolicyName" is the value to the shared access policy for each of the Hybrid Connections you've entered earlier.
+4. Clone the **appsettings.json.template** file into **appsettings.json** and change the value of the `Verbose` in the `Log` section to be either `false` or `true` if you want to have a verbose output of all outgoing message. The latter is helpful only for troubleshooting and debugging purposes.
 
-    d. "PolicyKey" is the secret key value for the shared access policy.
+5. Before building the solution, please make sure to change the `Build Action` for `NetPassage.json` file to `Content`.
 
-    e. "TargetServiceAddress" sets the port to be used for localhost. The address and port number should match the address and port used by your bot. For example, `http://localhost:[PORT]`.
+Then, before running `NetPassage` with your Bot application that installed, for example, within the Microsoft Teams application, make sure to update the Bot's `Messaging Endpoint` to your `NetPassage` Hybrid Connection Url. To do so, follow these steps:
 
-If you're going to use the `Websocket` relay, you'd also need to update the values in the **appsettings.json** for the `Microsoft.HybridConnections.Relay` project.
+1. Login to the Azure portal and open your Azure Bot resource.
 
-1. In Solution Explorer, expand the **Microsoft.HybridConnections.Relay** folder.
+2. Select **Configuration** under `Settings` to open the Azure Bot Configuration settings.
 
-2. Clone the **appsettings.json.template** file into **appsettings.json** and replace the following values with those from your Azure Service
-Bus.
-
-    a. `Namespace` is the name of your Azure Service Bus Relay. Enter the same value for both Http and Websocket sections.
-
-    b. Under **Listener** section, `ConnectionName` is the name of the Hybrid Connection used for Http relay. And Under **Relay** section, `ConnectionName`  is the name of the Hybrid Connection used for Websocket relay.
-
-    c. "PolicyName" is the value to the shared access policy for each of the Hybrid Connections you've entered earlier.
-
-    d. "PolicyKey" is the secret key value for the shared access policy.
-
-    e. "TargetServiceAddress" sets the port to be used for localhost. The address and port number should match the address and port used by your bot. For example, `http://localhost:[PORT]`.
-
-Before testing the relay, your Azure Web Bot's messaging endpoint must be updated to match the relay.
-
-1. Login to the Azure portal and open your Web App Bot.
-
-2. Select **Settings** under Bot management to open the settings blade.
-
-3. In the **Messaging endpoint** field, enter the service bus namespace and relay. The relay should match the relay `ConnectionName` entered in the **NetPassage.json** file and should not exist in Azure.
-
-4. Append **"/api/messages"** to the end to create the full endpoint to be used. For example, `https://example-service-bus.servicebus.windows.net/websocketrelay/api/messages`.
-
+3. In the **Messaging endpoint** field, enter the hybrid connection url as follows: `https://<your relay namespace>.servicebus.windows.net/<your hybrid connection name>`
+4. Append **/api/messages** to the end to create the full endpoint to be used. For example, `https://example-service-bus.servicebus.windows.net/websocketrelay/api/messages`.
 5. Click **Save** when completed.
 
 Now, back to the Visual Studio.
 
-1. In Visual Studio, if you want to run in `Websocket` mode, make sure both `NetPassage` and `Microsoft.HybridConnections.Relay` projects are selected to start. Then, press **F5** to run both projects.
-And, if you're planning on using only `Http` mode, you should only run `NetPassage` project.
+1. In Visual Studio, Build the solution. Make sure to select `NetPassage` project as your startup project if you want to run it directly from the Visual Studio. Alternatively, you can open your Command Console or PowerShell console, navigate to the solution binary directory and execute `Netpassage.exe` executable file.
 
 2. Open and run your locally hosted bot.
 
 3. Test your bot on a channel (Test in Web Chat, Skype, Teams, etc.). User data is captured and logged as activity occurs.
 
     - When using the Bot Framework Emulator: The endpoint entered in Emulator must be the service bus endpoint saved in your Azure Web Bot **Settings** blade, under **Messaging Endpoint**.
-
-4. Once testing is completed, you can compile the project into an executable.
-
-    a. Right click the project folder in Visual Studio and select **Build**.
-
-    b. The .exe will output to the **/bin/debug** folder, along with other necessary files, located in the project’s directory folder. All the files are necessary to run and should be included when moving the .exe to a new folder/location.
-    - The **app.config** is in the same folder and can be edited as credentials change without needing to recompile the project.
 
 ### Building with Visual Studio for Mac
 
@@ -110,6 +85,11 @@ When building the solution on Mac, the steps are largely the same as shown above
     c. In the **Arguments** field, enter "**NetPassage.json**".
 
     d. Select **OK** and retry running `NetPassage` via Visual Studio for Mac.
+
+
+### Note about the static web pages
+
+If the client requires the static web page to be returned with the request, they should always add the following header to the response message: `Content-Type: "text/html; charset=UTF-8"`.
 
 ## Acknowledgments
 

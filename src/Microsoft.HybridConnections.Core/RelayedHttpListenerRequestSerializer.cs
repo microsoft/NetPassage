@@ -1,14 +1,29 @@
-﻿using Microsoft.Azure.Relay;
-using Microsoft.HybridConnections.Core.Extensions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="RelayedHttpListenerRequestSerializer.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
+
 
 namespace Microsoft.HybridConnections.Core
 {
+    using Microsoft.Azure.Relay;
+    using Microsoft.HybridConnections.Core.Extensions;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+
     public static class RelayedHttpListenerRequestSerializer
     {
         /// <summary>
@@ -18,9 +33,9 @@ namespace Microsoft.HybridConnections.Core
         /// <returns></returns>
         public static async Task<string> SerializeAsync(RelayedHttpListenerRequest request)
         {
-            var requestMessage = new RequestMessage
+            var requestMessage = new SerializableRequestMessage
             {
-                Content = await (new StreamContent(request.InputStream)).ReadAsByteArrayAsync(),
+                Content = await (new StreamContent(request.InputStream)).ReadAsStringAsync(),
                 HttpMethod = request.HttpMethod,
                 RemoteEndPoint = request.RemoteEndPoint.Address.ToString(),
                 Url = request.Url.AbsoluteUri,
@@ -44,11 +59,11 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public static async Task<string> SerializeAsync(HttpRequestMessage request)
+        public static async Task<string> SerializeRequestAsync(HttpRequestMessage request)
         {
-            var requestMessage = new RequestMessage
+            var requestMessage = new SerializableRequestMessage
             {
-                Content = await request.Content.ReadAsByteArrayAsync(),
+                Content = request.Content != null ? await request.Content.ReadAsStringAsync() : null,
                 HttpMethod = request.Method.Method,
                 RemoteEndPoint = request.RequestUri.ToString(),
                 Url = request.RequestUri.ToString()
@@ -76,13 +91,13 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="jsonObject"></param>
         /// <returns></returns>
-        public static HttpRequestMessage Deserialize(string jsonObject)
+        public static HttpRequestMessage DeserializeRequest(string jsonObject)
         {
-            var serializedRequestMessage = JsonConvert.DeserializeObject<RequestMessage>(jsonObject);
+            var serializedRequestMessage = JsonConvert.DeserializeObject<SerializableRequestMessage>(jsonObject);
 
             var requestMessage = new HttpRequestMessage();
             // Get message content
-            requestMessage.Content = new ByteArrayContent(serializedRequestMessage.Content);
+            requestMessage.Content = new StringContent(serializedRequestMessage.Content);
 
             // populate Headers
             foreach (var header in serializedRequestMessage.Headers)
@@ -106,29 +121,31 @@ namespace Microsoft.HybridConnections.Core
         }
 
         /// <summary>
-        /// Validates the Json string
+        /// Serialize HttpResponseMessage
         /// </summary>
-        /// <param name="strInput"></param>
+        /// <param name="response"></param>
         /// <returns></returns>
-        private static bool IsValidJson(string strInput)
+        public static async Task<string> SerializeResponseAsync(HttpResponseMessage response)
         {
-            strInput = strInput.Trim();
-            if ((!strInput.StartsWith("{") || !strInput.EndsWith("}")) && (!strInput.StartsWith("[") || !strInput.EndsWith("]")))
+            var responseMessage = new SerializableResponseMessage
             {
-                return false;
+                Content = await response.Content?.ReadAsStringAsync(),
+                ReasonPhrase = response.ReasonPhrase,
+                StatusCode = response.StatusCode.ToString(),
+                requestMessage = await SerializeRequestAsync(response.RequestMessage),
+                IsSuccessStatusCode = response.IsSuccessStatusCode,
+            };
+
+            // populate Headers
+            foreach (var header in response.Headers)
+            {
+                responseMessage.Headers = responseMessage.Headers ?? new List<KeyValuePair<string, IEnumerable<string>>>();
+                ((List<KeyValuePair<string, IEnumerable<string>>>)responseMessage.Headers)
+                    .Add(new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value));
             }
 
-            try
-            {
-                JToken.Parse(strInput);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return JsonConvert.SerializeObject(responseMessage);
         }
-
 
         private static Uri GenerateUriFromSbUrl(string sbUrl, string scheme, string connectionName)
         {

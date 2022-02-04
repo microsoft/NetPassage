@@ -1,13 +1,30 @@
-﻿using Microsoft.Azure.Relay;
-using System;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="HttpListener.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
 
 namespace Microsoft.HybridConnections.Core
 {
+    using Microsoft.Azure.Relay;
+    using System;
+    using System.Collections.Generic;
+    using System.Net;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+
     public class HttpListener
     {
         private readonly HttpClient _httpClient = null;
@@ -51,8 +68,9 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="context"></param>
         /// <param name="connectionName"></param>
+        /// <param name="httpTarget"></param>
         /// <returns></returns>
-        public static async Task<HttpRequestMessage> CreateHttpRequestMessageAsync(RelayedHttpListenerContext context, string connectionName)
+        public static async Task<HttpRequestMessage> CreateHttpRequestMessageAsync(RelayedHttpListenerContext context, string connectionName, string httpTarget)
         {
             var requestMessage = new HttpRequestMessage();
             if (context.Request.HasEntityBody)
@@ -67,7 +85,14 @@ namespace Microsoft.HybridConnections.Core
 
             var relativePath = context.Request.Url.GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped);
             relativePath = relativePath.Replace($"/{connectionName}/", string.Empty, StringComparison.OrdinalIgnoreCase);
-            requestMessage.RequestUri = new Uri(relativePath, UriKind.RelativeOrAbsolute);
+            if (relativePath.Length > 0)
+            {
+                requestMessage.RequestUri = new Uri(relativePath, UriKind.RelativeOrAbsolute);
+            }
+            else
+            {
+                requestMessage.RequestUri = new Uri(httpTarget);
+            }
             requestMessage.Method = new HttpMethod(context.Request.HttpMethod);
 
             foreach (var headerName in context.Request.Headers.AllKeys)
@@ -75,17 +100,14 @@ namespace Microsoft.HybridConnections.Core
                 if (string.Equals(headerName, "Host", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(headerName, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Don't flow these headers here
-                    continue;
+                        // Don't flow these headers here
+                        continue;
                 }
 
                 requestMessage.Headers.Add(headerName, context.Request.Headers[headerName]);
             }
 
             await Logger.LogRequestActivityAsync(requestMessage);
-
-            //var requestMessageSer = await RelayedHttpListenerRequestSerializer.SerializeAsync(requestMessage);
-            //var deserializedRequestMessage = RelayedHttpListenerRequestSerializer.Deserialize(requestMessageSer);
 
             return requestMessage;
         }
@@ -97,13 +119,15 @@ namespace Microsoft.HybridConnections.Core
         /// <param name="context"></param>
         /// <param name="responseMessage"></param>
         /// <returns></returns>
-        public static async Task SendResponseAsync(RelayedHttpListenerContext context, HttpResponseMessage responseMessage)
+        public static async Task<long> SendResponseAsync(RelayedHttpListenerContext context, HttpResponseMessage responseMessage)
         {
             context.Response.StatusCode = responseMessage.StatusCode;
             context.Response.StatusDescription = responseMessage.ReasonPhrase;
-            foreach (var header in responseMessage.Headers)
+
+            foreach (KeyValuePair<string, IEnumerable<string>> header in responseMessage.Headers)
             {
-                if (string.Equals(header.Key, "Transfer-Encoding"))
+                if (string.Equals(header.Key, "Transfer-Encoding") 
+                    || string.Equals(header.Key, "Keep-Alive"))
                 {
                     continue;
                 }
@@ -111,8 +135,14 @@ namespace Microsoft.HybridConnections.Core
                 context.Response.Headers.Add(header.Key, string.Join(",", header.Value));
             }
 
+            // Note: the following line has been commented out as the client app should add this header every time the response has text/html payload.
+            // To support Web page rendering 
+            // context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
+
             var responseStream = await responseMessage.Content.ReadAsStreamAsync();
             await responseStream.CopyToAsync(context.Response.OutputStream);
+
+            return responseStream.Length;
         }
 
 
