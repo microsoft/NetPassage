@@ -87,6 +87,12 @@ When building the solution on Mac, the steps are largely the same as shown above
     d. Select **OK** and retry running `NetPassage` via Visual Studio for Mac.
 
 
+### Note about response message headers
+
+By default, NetPassage adds the following header to all response messages in order to support rendering web page responses: `Content-Type: "text/html; charset=UTF-8"`.
+
+This may impact scenarios where the client may want to instead return other content-types (e.g. pure JSON documents). 
+
 ## Acknowledgments
 
 Part of this code is based on the work that [Gabo Gilabert](https://github.com/gabog) did in his project [here](https://github.com/gabog/AzureServiceBusBotRelay).
