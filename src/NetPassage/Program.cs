@@ -179,9 +179,6 @@ namespace NetPassage
 
                 // The context MUST be closed here
                 await context.Response.CloseAsync();
-
-                // The context MUST be closed here
-                await context.Response.CloseAsync();
             }
             catch (RelayException re)
             {

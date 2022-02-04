@@ -147,32 +147,6 @@ namespace Microsoft.HybridConnections.Core
             return JsonConvert.SerializeObject(responseMessage);
         }
 
-
-        /// <summary>
-        /// Validates the Json string
-        /// </summary>
-        /// <param name="strInput"></param>
-        /// <returns></returns>
-        private static bool IsValidJson(string strInput)
-        {
-            strInput = strInput.Trim();
-            if ((!strInput.StartsWith("{") || !strInput.EndsWith("}")) && (!strInput.StartsWith("[") || !strInput.EndsWith("]")))
-            {
-                return false;
-            }
-
-            try
-            {
-                JToken.Parse(strInput);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-
         private static Uri GenerateUriFromSbUrl(string sbUrl, string scheme, string connectionName)
         {
             var httpUri = new Uri(sbUrl.Replace($"{scheme}://", "http://"));

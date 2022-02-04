@@ -127,8 +127,7 @@ namespace Microsoft.HybridConnections.Core
             foreach (KeyValuePair<string, IEnumerable<string>> header in responseMessage.Headers)
             {
                 if (string.Equals(header.Key, "Transfer-Encoding") 
-                    || string.Equals(header.Key, "Keep-Alive")
-                    )
+                    || string.Equals(header.Key, "Keep-Alive"))
                 {
                     continue;
                 }
@@ -136,8 +135,9 @@ namespace Microsoft.HybridConnections.Core
                 context.Response.Headers.Add(header.Key, string.Join(",", header.Value));
             }
 
-            // To support Web page rendering
-            context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
+            // Note: the following line has been commented out as the client app should add this header every time the response has text/html payload.
+            // To support Web page rendering 
+            // context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
 
             var responseStream = await responseMessage.Content.ReadAsStreamAsync();
             await responseStream.CopyToAsync(context.Response.OutputStream);
