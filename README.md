@@ -87,10 +87,6 @@ When building the solution on Mac, the steps are largely the same as shown above
     d. Select **OK** and retry running `NetPassage` via Visual Studio for Mac.
 
 
-### Note about the static web pages
-
-If the client requires the static web page to be returned with the request, they should always add the following header to the response message: `Content-Type: "text/html; charset=UTF-8"`.
-
 ## Acknowledgments
 
 Part of this code is based on the work that [Gabo Gilabert](https://github.com/gabog) did in his project [here](https://github.com/gabog/AzureServiceBusBotRelay).
