@@ -1,34 +1,47 @@
-﻿using Microsoft.Azure.Relay;
-using Microsoft.Extensions.Configuration;
-using Microsoft.HybridConnections.Core;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="Program.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
+
 
 namespace NetPassage
 {
+    using Microsoft.Azure.Relay;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.HybridConnections.Core;
+    using System;
+    using System.Collections.Generic;
+    using System.Net.Http;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     class Program
     {
-        private static bool KeepRunning = true;
+        private readonly static object ConsoleLock = new object();
         private static IConfiguration AppConfig;
         private static IConfiguration UserConfig;
         private static string LeftSectionFiller;
         private static string MidSectionFiller;
-        private static string ConnectionName;
-        private static string TargetHttpRelay;
-        private static bool IsHttpRelayMode;
         private static string ConnectionStatus = "offline";
+        private static string ConfigHeader = "Relay";
+        private static string RelayNamespace;
+        private static List<ConnectionSettings> ConnectionSettingsCollection;
 
         static void Main(string[] args)
         {
             Console.CancelKeyPress += (sender, eventArgs) => {
                 // call methods to clean up
                 eventArgs.Cancel = true;
-                Program.KeepRunning = false;
             };
 
             AppConfig = new ConfigurationBuilder()
@@ -57,68 +70,38 @@ namespace NetPassage
                 .AddJsonFile(args[0], false, true)
                 .Build();
 
-            IsHttpRelayMode = UserConfig["Relay:Mode"].Equals("http", StringComparison.CurrentCultureIgnoreCase);
-            
-            var listenersCount = Int32.Parse(UserConfig["Relay:Connections"]);
 
-            var configHeader = IsHttpRelayMode ? "Http" : "WebSocket";
-
-            var relayNamespace = $"{UserConfig[$"{configHeader}:Namespace"]}.servicebus.windows.net";
-            var keyName = UserConfig[$"{configHeader}:PolicyName"];
-            var key = UserConfig[$"{configHeader}:PolicyKey"];
-
-            ConnectionName = UserConfig[$"{configHeader}:ConnectionName"];
-            TargetHttpRelay = UserConfig[$"{configHeader}:TargetServiceAddress"];
+            // Get Relay information for all hybrid connections
+            ConnectionSettingsCollection = UserConfig.GetSection($"{ConfigHeader}:ConnectionSettings")?.Get<List<ConnectionSettings>>();
+            RelayNamespace = $"{UserConfig["Relay:Namespace"]}.servicebus.windows.net";
 
             // Define the list of awaitable parallel tasks for websocket listeners
-            List<Task<bool>> activeListenerTasks = new List<Task<bool>>();
+            List<Task> activeListenerTasks = new List<Task>();
             CancellationTokenSource cts = new CancellationTokenSource();
-
 
             try
             {
-                while (Program.KeepRunning)
+                ShowAll();
+
+                // Do your work in here, in small chunks.
+                // If you literally just want to wait until ctrl-c,
+                // not doing anything, see the answer using set-reset events.
+                // Create the WebSockets hybrid proxy listeners for each connection
+                foreach (var conn in ConnectionSettingsCollection)
                 {
-                    ShowAll();
-                    // Do your work in here, in small chunks.
-                    // If you literally just want to wait until ctrl-c,
-                    // not doing anything, see the answer using set-reset events.
-                    if (IsHttpRelayMode)
-                    {
-                        //Construct the Http hybrid proxy listeners tasks
-                        for (int i = 0; i < listenersCount; i++)
-                        {
-                            activeListenerTasks.Add(RunHttpRelayAsync(new HttpListener(
-                                relayNamespace,
-                                ConnectionName,
-                                keyName,
-                                key,
-                                TargetHttpRelay,
-                                ConnectionEventHandler,
-                                cts)));
-                        }
-
-                        // Wait for all the tasks to finish
-                        Task.WaitAll(activeListenerTasks.ToArray());
-                    }
-                    else // WebSockets Relay Mode
-                    {
-                        // Create the WebSockets hybrid proxy listener
-                        var webSocketListener = new WebSocketListener(
-                            relayNamespace,
-                            ConnectionName,
-                            keyName,
-                            key,
-                            ProcessWebSocketMessagesHandler,
-                            ConnectionEventHandler,
-                            cts);
-
-                        // Opening the listener establishes the control channel to
-                        // the Azure Relay service. The control channel is continuously
-                        // maintained, and is reestablished when connectivity is disrupted.
-                        Program.KeepRunning = RunWebSocketRelayAsync(webSocketListener).GetAwaiter().GetResult();
-                    }
+                    activeListenerTasks.Add(RunWebSocketRelayAsync(new WebSocketListener(
+                    RelayNamespace,
+                    conn,
+                    ProcessWebSocketMessagesHandler,
+                    ConnectionEventHandler,
+                    cts), cts));
                 }
+
+                // Opening the listeners for each hybrid connection to control channel to
+                // the Azure Relay service. The control channel is continuously
+                // maintained, and is reestablished when connectivity is disrupted.
+                // Wait for all the tasks to finish
+                Task.WaitAll(activeListenerTasks.ToArray(), cts.Token);
             }
             catch (AggregateException ex)
             {
@@ -137,93 +120,30 @@ namespace NetPassage
         }
 
         /// <summary>
-        /// Establishes the websocket connection with the Azure Relay service and then starts the listener
-        /// Opening the listener establishes the control channel to
-        /// the Azure Relay service. The control channel is continuously
-        /// maintained, and is reestablished when connectivity is disrupted.
-        /// </summary>
-        /// <param name="httpRelayListener"></param>
-        /// <returns></returns>
-        static async Task<bool> RunHttpRelayAsync(HttpListener relayListener)
-        {
-            try
-            {
-                // Opens up the connection to the Relay service
-                await relayListener.OpenAsync(ProcessHttpMessagesHandler);
-
-                // Start a new thread that will continuously read the console.
-                await relayListener.ListenAsync();
-            }
-            catch (Exception e)
-            {
-                Logger.LogException(e);
-                return false;
-            }
-            finally
-            {
-                // Close the connection
-                await relayListener.CloseAsync();
-            }
-
-            return !relayListener.CTS.IsCancellationRequested;
-        }
-
-        /// <summary>
         /// RunWebsocketRelayAsync
         /// </summary>
         /// <param name="webSocketListener"></param>
+        /// <param name="cts"></param>
         /// <returns></returns>
-        static async Task<bool> RunWebSocketRelayAsync(WebSocketListener webSocketListener)
+        static async Task RunWebSocketRelayAsync(WebSocketListener webSocketListener, CancellationTokenSource cts)
         {
-            // Opening the listener establishes the control channel to
-            // the Azure Relay service. The control channel is continuously
-            // maintained, and is reestablished when connectivity is disrupted.
-            await webSocketListener.OpenAsync();
-
-            // Start a new thread that will continuously read the from the websocket and write to the target Http endpoint.
-            await webSocketListener.ListenAsync(ProcessWebSocketMessagesHandler);
-
-            // Close Websocket connection
-            await webSocketListener.CloseAsync();
-
-            // Return true, if the cancellation was requested, otherwise - false
-            return webSocketListener.IsCancellationRequested();
-        }
-
-        /// <summary>
-        /// Listener Response Handler
-        /// </summary>
-        /// <param name="context"></param>
-        static async void ProcessHttpMessagesHandler(RelayedHttpListenerContext context)
-        {
-            var startTimeUtc = DateTime.UtcNow;
-
             try
             {
-                // Send the request message to the target listener
-                var requestMessage = await HttpListener.CreateHttpRequestMessageAsync(context, ConnectionName);
-                var responseMessage = await SendHttpRequestAsync(requestMessage);
+                // Opening the listener establishes the control channel to
+                // the Azure Relay service. The control channel is continuously
+                // maintained, and is reestablished when connectivity is disrupted.
+                await webSocketListener.OpenAsync().ConfigureAwait(false);
 
-                // Send the response message back to the caller
-                await HttpListener.SendResponseAsync(context, responseMessage);
+                // Start a new thread that will continuously read the from the websocket and write to the target Http endpoint.
+                await webSocketListener.ListenAsync().ConfigureAwait(false);
 
-                // Log the message out to the console
-                Logger.LogRequest(requestMessage.Method.Method, requestMessage.RequestUri.LocalPath, $"\u001b[32m {responseMessage.StatusCode} \u001b[0m", $"Forwarded to {TargetHttpRelay}", ShowAll);
+                // Close Websocket connection
+                await webSocketListener.CloseAsync().ConfigureAwait(false);
             }
-            catch (RelayException re)
+            catch
             {
-                Logger.LogRequest("Http", ConnectionName, $"\u001b[31m {System.Net.HttpStatusCode.ServiceUnavailable} \u001b[0m", re.Message, ShowAll);
-            }
-            catch (Exception e)
-            {
-                Logger.LogRequest("Http", ConnectionName, $"\u001b[31m {e.GetType().Name} \u001b[0m", e.Message, ShowAll);
-                HttpListener.SendErrorResponse(e, context);
-            }
-            finally
-            {
-                Logger.LogPerformanceMetrics(startTimeUtc);
-                // The context MUST be closed here
-                await context.Response.CloseAsync();
+                cts.Cancel();
+                throw;
             }
         }
 
@@ -231,8 +151,9 @@ namespace NetPassage
         /// <summary>
         /// The method initiates the connection.
         /// </summary>
-        /// <param name="relayConnection"></param>
-        static async void ProcessWebSocketMessagesHandler(RelayedHttpListenerContext context)
+        /// <param name="context"></param>
+        /// <param name="connectionSettings"></param>
+        static async void ProcessWebSocketMessagesHandler(RelayedHttpListenerContext context, ConnectionSettings connectionSettings)
         {
             DateTime startTimeUtc = DateTime.UtcNow;
             long bytesSent = 0;
@@ -240,14 +161,14 @@ namespace NetPassage
             try
             {
                 // Send the request message to the target listener
-                var requestMessage = await HttpListener.CreateHttpRequestMessageAsync(context, ConnectionName);
-                var responseMessage = await SendHttpRequestAsync(requestMessage);
+                var requestMessage = await HttpListener.CreateHttpRequestMessageAsync(context, connectionSettings.HybridConnection, connectionSettings.TargetHttp);
+                var responseMessage = await SendHttpRequestAsync(requestMessage, connectionSettings.TargetHttp);
 
                 // Send the response message back to the caller
                 bytesSent = await HttpListener.SendResponseAsync(context, responseMessage);
 
                 // Log the message out to the console
-                Logger.LogRequest(requestMessage.Method.Method, requestMessage.RequestUri.LocalPath, $"Status: \u001b[32m{responseMessage.StatusCode}\u001b[0m   Sent: \u001b[32m{bytesSent}\u001b[0m bytes", $"Forwarded to {TargetHttpRelay}", ShowAll);
+                Logger.LogRequest(requestMessage.Method.Method, requestMessage.RequestUri.LocalPath, $"Status: \u001b[32m{responseMessage.StatusCode}\u001b[0m   Sent: \u001b[32m{bytesSent}\u001b[0m bytes", $"Forwarded to {connectionSettings.TargetHttp}", ShowAll);
 
                 if (Logger.IsVerboseLogs)
                 {
@@ -258,15 +179,18 @@ namespace NetPassage
 
                 // The context MUST be closed here
                 await context.Response.CloseAsync();
+
+                // The context MUST be closed here
+                await context.Response.CloseAsync();
             }
             catch (RelayException re)
             {
-                Logger.LogRequest("Http", ConnectionName, $"\u001b[31m {System.Net.HttpStatusCode.ServiceUnavailable} \u001b[0m", re.Message, ShowAll);
+                Logger.LogRequest("Http", connectionSettings.HybridConnection, $"\u001b[31m {System.Net.HttpStatusCode.ServiceUnavailable} \u001b[0m", re.Message, ShowAll);
             }
             catch (Exception e)
             {
-                Logger.LogRequest("Http", ConnectionName, $"\u001b[31m {e.GetType().Name} \u001b[0m", e.Message, ShowAll);
-                HttpListener.SendErrorResponse(e, context);
+                Logger.LogRequest("Http", connectionSettings.HybridConnection, $"\u001b[31m {e.GetType().Name} \u001b[0m", e.Message, ShowAll);
+                 HttpListener.SendErrorResponse(e, context);
             }
             finally
             {
@@ -279,16 +203,16 @@ namespace NetPassage
         /// Creates and sends the Stream message over Http Relay connection
         /// </summary>
         /// <param name="requestMessage"></param>
+        /// <param name="httpTarget"></param>
         /// <returns></returns>
-        static async Task<HttpResponseMessage> SendHttpRequestAsync(HttpRequestMessage requestMessage)
+        static async Task<HttpResponseMessage> SendHttpRequestAsync(HttpRequestMessage requestMessage, string httpTarget)
         {
             try
             {
                 // Send the request message via Http
-                using (var httpClient = new HttpClient { BaseAddress = new Uri(TargetHttpRelay, UriKind.RelativeOrAbsolute) })
+                using (var httpClient = new HttpClient { BaseAddress = new Uri(httpTarget, UriKind.RelativeOrAbsolute) })
                 {
                     httpClient.DefaultRequestHeaders.ExpectContinue = true;
-                    //httpClient.DefaultRequestHeaders.Add("Transfer-Encoding", "chunked");
                     return await httpClient.SendAsync(requestMessage);
                 }
             }
@@ -299,23 +223,33 @@ namespace NetPassage
             }
         }
 
+        /// <summary>
+        /// Show console output
+        /// </summary>
         static void ShowAll()
         {
-            Console.Clear();
-            ShowHeader(AppConfig);
-            ShowConfiguration(UserConfig);
-            ShowRequestsHeader();
-
-            List<string> logs = new List<string>();
-            logs.AddRange(Logger.Logs);
-            logs.Reverse();
-
-            foreach (var message in logs)
+            lock (ConsoleLock)
             {
-                Console.WriteLine(message);
+                Console.Clear();
+                ShowHeader(AppConfig);
+                ShowConfiguration();
+                ShowRequestsHeader();
+
+                List<string> logs = new List<string>();
+                logs.AddRange(Logger.Logs);
+                // logs.Reverse();
+
+                foreach (var message in logs)
+                {
+                    Console.WriteLine(message);
+                }
             }
         }
 
+        /// <summary>
+        /// Show the header
+        /// </summary>
+        /// <param name="config"></param>
         static void ShowHeader(IConfiguration config)
         {
             var appName = config["App:Name"];
@@ -333,6 +267,10 @@ namespace NetPassage
             Console.WriteLine("\n\r\n\r");
         }
 
+        /// <summary>
+        /// Show the error output
+        /// </summary>
+        /// <param name="message"></param>
         static void ShowError(string message)
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -341,10 +279,12 @@ namespace NetPassage
             Console.ResetColor();
         }
 
-        static void ShowConfiguration(IConfiguration config)
+        /// <summary>
+        /// Display console header
+        /// </summary>
+        static void ShowConfiguration()
         {
-            var relayNamespace = $"sb://{config[$"{config["Relay:Mode"]}:Namespace"]}.servicebus.windows.net";
-            var IsHttpRelayMode = config["Relay:Mode"].Equals("http", StringComparison.CurrentCultureIgnoreCase);
+            var relayNamespace = $"sb://{RelayNamespace}.servicebus.windows.net";
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"{LeftSectionFiller}{MidSectionFiller}(Ctrl+C to quit)");
@@ -358,9 +298,13 @@ namespace NetPassage
             filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
             Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}");
 
-            title = IsHttpRelayMode? "Http Forwarding" : "Websocket Forwarding";
+            title = "Websocket to Http Forwarding";
             filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
-            Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}/{ConnectionName} {(char)29} {TargetHttpRelay}");
+
+            foreach (var settings in ConnectionSettingsCollection)
+            {
+                Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}/{settings.HybridConnection} {(char)29} {settings.TargetHttp}");
+            }
         }
 
         /// <summary>
@@ -370,8 +314,8 @@ namespace NetPassage
         {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\n\r\n\r");
-            Console.WriteLine(IsHttpRelayMode ? "HTTP Requests" : "Websocket Requests");
-            Console.WriteLine("___________________");
+            Console.WriteLine("Websocket Relay Requests");
+            Console.WriteLine("__________________________");
             Console.WriteLine("\n\r");
         }
 

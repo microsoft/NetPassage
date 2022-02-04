@@ -1,18 +1,30 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Azure.Relay;
-using Microsoft.HybridConnections.Core.Extensions;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="HttpListener.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
 
 namespace Microsoft.HybridConnections.Core
 {
+    using Microsoft.Azure.Relay;
+    using System;
+    using System.Collections.Generic;
+    using System.Net;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+
     public class HttpListener
     {
         private readonly HttpClient _httpClient = null;
@@ -56,8 +68,9 @@ namespace Microsoft.HybridConnections.Core
         /// </summary>
         /// <param name="context"></param>
         /// <param name="connectionName"></param>
+        /// <param name="httpTarget"></param>
         /// <returns></returns>
-        public static async Task<HttpRequestMessage> CreateHttpRequestMessageAsync(RelayedHttpListenerContext context, string connectionName)
+        public static async Task<HttpRequestMessage> CreateHttpRequestMessageAsync(RelayedHttpListenerContext context, string connectionName, string httpTarget)
         {
             var requestMessage = new HttpRequestMessage();
             if (context.Request.HasEntityBody)
@@ -78,7 +91,7 @@ namespace Microsoft.HybridConnections.Core
             }
             else
             {
-                requestMessage.RequestUri = new Uri("http://localhost:3978");
+                requestMessage.RequestUri = new Uri(httpTarget);
             }
             requestMessage.Method = new HttpMethod(context.Request.HttpMethod);
 
@@ -94,13 +107,7 @@ namespace Microsoft.HybridConnections.Core
                 requestMessage.Headers.Add(headerName, context.Request.Headers[headerName]);
             }
 
-            // requestMessage.Headers.Add("Content-Type", "text/html; charset=UTF-8; X-Content-Type-Options=nosniff");
-            // requestMessage.Headers.Add("Transfer-Encoding", "chunked");
-
             await Logger.LogRequestActivityAsync(requestMessage);
-
-            //var requestMessageSer = await RelayedHttpListenerRequestSerializer.SerializeAsync(requestMessage);
-            //var deserializedRequestMessage = RelayedHttpListenerRequestSerializer.Deserialize(requestMessageSer);
 
             return requestMessage;
         }
@@ -116,10 +123,9 @@ namespace Microsoft.HybridConnections.Core
         {
             context.Response.StatusCode = responseMessage.StatusCode;
             context.Response.StatusDescription = responseMessage.ReasonPhrase;
-            var headerList = new List<string>();
+
             foreach (KeyValuePair<string, IEnumerable<string>> header in responseMessage.Headers)
             {
-                headerList.Add(header.Key);
                 if (string.Equals(header.Key, "Transfer-Encoding") 
                     || string.Equals(header.Key, "Keep-Alive")
                     )

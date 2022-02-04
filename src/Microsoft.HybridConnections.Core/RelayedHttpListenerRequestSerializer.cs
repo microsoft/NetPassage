@@ -1,14 +1,29 @@
-﻿using Microsoft.Azure.Relay;
-using Microsoft.HybridConnections.Core.Extensions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿// ***********************************************************************
+// Assembly         : NetPassage.exe
+// Author           : Danny Garber
+// Created          : 07-22-2021
+//
+// Last Modified By : dannygar
+// Last Modified On : 02-04-2022
+// ***********************************************************************
+// <copyright file="RelayedHttpListenerRequestSerializer.cs" company="Microsoft">
+//     Copyright ©  2022
+// </copyright>
+// <summary></summary>
+// ***********************************************************************>
+
 
 namespace Microsoft.HybridConnections.Core
 {
+    using Microsoft.Azure.Relay;
+    using Microsoft.HybridConnections.Core.Extensions;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+
     public static class RelayedHttpListenerRequestSerializer
     {
         /// <summary>
