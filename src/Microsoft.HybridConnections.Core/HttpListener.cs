@@ -135,9 +135,8 @@ namespace Microsoft.HybridConnections.Core
                 context.Response.Headers.Add(header.Key, string.Join(",", header.Value));
             }
 
-            // Note: the following line has been commented out as the client app should add this header every time the response has text/html payload.
             // To support Web page rendering 
-            // context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
+            context.Response.Headers.Add(HttpRequestHeader.ContentType, "text/html; charset=UTF-8");
 
             var responseStream = await responseMessage.Content.ReadAsStreamAsync();
             await responseStream.CopyToAsync(context.Response.OutputStream);
