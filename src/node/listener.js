@@ -5,6 +5,15 @@ const path = require('path');
 const ENV_FILE = path.join(__dirname, '.env');
 require('dotenv').config({ path: ENV_FILE });
 
+if (process.env.NODE_ENV === 'development') {
+    const httpsAgent = new https.Agent({
+        rejectUnauthorized: false,
+    })
+    axios.defaults.httpsAgent = httpsAgent
+    // eslint-disable-next-line no-console
+    console.log(process.env.NODE_ENV, `RejectUnauthorized is disabled.`)
+}
+
 var azureRelayConfig = {
     namespace: process.env.namespace,
     path: process.env.hybridConnectionPath,
