@@ -2,6 +2,9 @@
     "author": "bcage29",
     "name": "nodepassage",
     "version": "0.1.0",
+    "scripts": {
+      "start": "node ./listener.js"
+    },
     "repository": {
       "type": "git",
       "url": "git://github.com/Microsoft/NetPassage.git"
