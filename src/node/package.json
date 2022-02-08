@@ -1,0 +1,17 @@
+{
+    "author": "bcage29",
+    "name": "nodepassage",
+    "version": "0.1.0",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/Microsoft/NetPassage.git"
+    },
+    "devDependencies": {},
+    "optionalDependencies": {},
+    "dependencies": {
+      "dotenv": "16.0.0",
+      "hyco-https": "^1.4.5",
+      "axios": "0.25.0"
+    }
+}
+  
