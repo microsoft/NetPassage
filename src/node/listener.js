@@ -90,9 +90,9 @@ var server = https.createRelayedServer(
                     {
                         relayResponse.setHeader('Content-Type', response.headers["content-type"]);
                         relayResponse.end(response.data);
-                    }catch (ex)
+                    }catch (e)
                     {
-                        var a = ex;
+                        console.error(e);
                     }
                             
                 });
