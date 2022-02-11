@@ -6,25 +6,28 @@
 // Last Modified By : dannygar
 // Last Modified On : 02-04-2022
 // ***********************************************************************
-// <copyright file="WebHeaderCollectionExtensions.cs" company="Microsoft">
+// <copyright file="StringExtensions.cs" company="Microsoft">
 //     Copyright ©  2022
 // </copyright>
 // <summary></summary>
 // ***********************************************************************>
 
-
 namespace Microsoft.HybridConnections.Core.Extensions
 {
-    using System.Collections.Generic;
-    public static class WebHeaderCollectionExtensions
+    using System;
+    public static class StringExtensions
     {
-        public static IEnumerable<KeyValuePair<string, string>> GetHeaders(this System.Net.WebHeaderCollection webHeaderCollection)
+        /// <summary>
+        /// Ensures the given string ends with the requested pattern. If it does no allocations are performed.
+        /// </summary>
+        public static string EnsureEndsWith(this string s, string value, StringComparison comparisonType = StringComparison.Ordinal)
         {
-            string[] keys = webHeaderCollection.AllKeys;
-            for (int i = 0; i < keys.Length; i++)
+            if (!string.IsNullOrEmpty(s) && s.EndsWith(value, comparisonType))
             {
-                yield return new KeyValuePair<string, string>(keys[i], webHeaderCollection[keys[i]]);
+                return s;
             }
+
+            return s + value;
         }
     }
 }
