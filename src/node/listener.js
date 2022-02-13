@@ -62,7 +62,7 @@ const getLogMessage = (msg) => {
 
 let logKeys = [];
 let logs = {};
-const maxLogs = 2;
+const maxLogs = 10;
 
 const addLog = (id, log) => {
     if (logs[id] == undefined) {
