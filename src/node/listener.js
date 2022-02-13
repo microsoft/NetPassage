@@ -27,11 +27,7 @@ var azureRelayConfig = {
   
 // used to forward request to local server
 const postData = async (url, data, headers) => {
-    try {
-        return await axios.post(url, data, { headers });
-    } catch (e) {
-        //console.error(e);
-    }
+    return await axios.post(url, data, { headers });
 };
 
 // used to forward request to local server
@@ -117,14 +113,11 @@ var server = https.createRelayedServer(
             // wait for all of the data to be received from a post
             relayRequest.on('data', (chunk) => { rawData += chunk; });
             relayRequest.on('end', () => {
-            try {
                 // parse the relayRequest body
                 const parsedData = JSON.parse(rawData);
                 // forward the data and headers to the local server
                 postData(localServerEndpoint, parsedData, headers)
                 .then((response) => {
-                    try
-                    {
                         const log = {
                             method: relayRequest.method,
                             path: relayRequest.url,
@@ -140,16 +133,15 @@ var server = https.createRelayedServer(
                         relayResponse.setHeader('Content-Type', response.headers["content-type"]);
                         relayResponse.setHeader('Content-Length', Buffer.byteLength(json));
                         relayResponse.end(json);
-                    }catch (e)
-                    {
-                        //console.log(e);
-                    }
+                }).catch((e) => {
+                    const log = {
+                        method: relayRequest.method,
+                        path: relayRequest.url,
+                        statusCode: e.response.status,
+                        statusText: e.response.statusText
+                    };
+                    addLog(relayResponse.requestId, log);
                 });
-
-                //console.log(parsedData);
-            } catch (e) {
-                //console.error(e);
-            }
             });
         } else {
             getData(localServerEndpoint, headers)
