@@ -137,8 +137,8 @@ var server = https.createRelayedServer(
                     const log = {
                         method: relayRequest.method,
                         path: relayRequest.url,
-                        statusCode: e.response.status,
-                        statusText: e.response.statusText
+                        statusCode: e.response != undefined ? e.response.status : '502',
+                        statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
                     };
                     addLog(relayResponse.requestId, log);
                 });
@@ -159,8 +159,8 @@ var server = https.createRelayedServer(
                 const log = {
                     method: relayRequest.method,
                     path: relayRequest.url,
-                    statusCode: e.response.status,
-                    statusText: e.response.statusText
+                    statusCode: e.response != undefined ? e.response.status : '502',
+                    statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
                 };
                 addLog(relayResponse.requestId, log);
             });
