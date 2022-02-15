@@ -175,5 +175,5 @@ server.listen( (err) => {
 });
 
 server.on('error', (err) => {
-    console.log('error: ' + err);
+    console.log('error: ' + err.message);
 });
