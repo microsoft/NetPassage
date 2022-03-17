@@ -77,6 +77,34 @@ const addLog = (id, log) => {
     }
 }
 
+const setHeaders = (relayResponse, headers) => {
+    var keys = Object.keys(headers);
+    for (var i = 0; i < keys.length; i++) {
+        k = keys[i];
+        if (k) {
+            switch (k) {
+                case 'transfer-encoding':
+                case 'keep-alive':
+                    continue;
+                default:
+                    const value = headers[k];
+                    if (value) relayResponse.setHeader(k, value);
+                    break;
+            }
+        } 
+    }
+}
+
+const formatData = (headers, data) => {
+    const contentType = headers['content-type'];
+    switch (contentType) {
+        case "application/json":
+            return JSON.stringify(data);
+        default:
+            return data;
+            break;
+    }
+};
 
 const relayPath = azureRelayConfig.namespace + "/" + azureRelayConfig.path;
 console.clear();
@@ -129,10 +157,9 @@ var server = https.createRelayedServer(
                         if (response.data == '') return relayResponse.end();
 
                         // copy the data from the local server to the relay response
-                        let json = JSON.stringify(response.data);
-                        relayResponse.setHeader('Content-Type', response.headers["content-type"]);
-                        relayResponse.setHeader('Content-Length', Buffer.byteLength(json));
-                        relayResponse.end(json);
+                        setHeaders(relayResponse, response.headers);
+                        const data = formatData(response.headers, response.data);
+                        relayResponse.end(data);
                 }).catch((e) => {
                     const log = {
                         method: relayRequest.method,
@@ -153,8 +180,9 @@ var server = https.createRelayedServer(
                     statusText: response.statusText
                 };
                 addLog(relayResponse.requestId, log);
-                relayResponse.setHeader('Content-Type', response.headers["content-type"]);
-                relayResponse.end(response.data);
+                setHeaders(relayResponse, response.headers);
+                const data = formatData(response.headers, response.data);
+                relayResponse.end(data);
             }).catch((e) => {
                 const log = {
                     method: relayRequest.method,
