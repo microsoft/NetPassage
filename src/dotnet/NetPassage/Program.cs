@@ -20,6 +20,7 @@ namespace NetPassage
     using Microsoft.HybridConnections.Core;
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Net.Http;
     using System.Text;
     using System.Threading;
@@ -34,7 +35,6 @@ namespace NetPassage
         private static string MidSectionFiller;
         private static string ConnectionStatus = "offline";
         private static string ConfigHeader = "Relay";
-        private static string RelayNamespace;
         private static List<ConnectionSettings> ConnectionSettingsCollection;
 
         static void Main(string[] args)
@@ -73,7 +73,7 @@ namespace NetPassage
 
             // Get Relay information for all hybrid connections
             ConnectionSettingsCollection = UserConfig.GetSection($"{ConfigHeader}:ConnectionSettings")?.Get<List<ConnectionSettings>>();
-            RelayNamespace = $"{UserConfig["Relay:Namespace"]}.servicebus.windows.net";
+            var relayNamespaceUrl = $"{UserConfig["Relay:Namespace"]}.servicebus.windows.net";
 
             // Define the list of awaitable parallel tasks for websocket listeners
             List<Task> activeListenerTasks = new List<Task>();
@@ -90,7 +90,7 @@ namespace NetPassage
                 foreach (var conn in ConnectionSettingsCollection)
                 {
                     activeListenerTasks.Add(RunWebSocketRelayAsync(new WebSocketListener(
-                    RelayNamespace,
+                    relayNamespaceUrl,
                     conn,
                     ProcessWebSocketMessagesHandler,
                     ConnectionEventHandler,
@@ -281,7 +281,8 @@ namespace NetPassage
         /// </summary>
         static void ShowConfiguration()
         {
-            var relayNamespace = $"sb://{RelayNamespace}.servicebus.windows.net";
+
+            var relayNamespaceUrl = $"{UserConfig["Relay:Namespace"]}.servicebus.windows.net";
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"{LeftSectionFiller}{MidSectionFiller}(Ctrl+C to quit)");
@@ -290,17 +291,18 @@ namespace NetPassage
             var filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
             Console.WriteLine($"{title}{filler}{MidSectionFiller}{ConnectionStatus}");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            title = "Azure Relay Namespace";
-            filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
-            Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}");
+            //Console.ForegroundColor = ConsoleColor.White;
+            //title = "Azure Relay Namespace";
+            //filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
+            //Console.WriteLine($"{title}{filler}{MidSectionFiller}{RelayNamespaceUrl}");
 
-            title = "Websocket to Http Forwarding";
-            filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
 
             foreach (var settings in ConnectionSettingsCollection)
             {
-                Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}/{settings.HybridConnection} {(char)29} {settings.TargetHttp}");
+                title = ToTitleCase($"{settings.HybridConnection} to Http Forwarding");
+                var publicEndpointUrl = $"https://{UserConfig["Relay:Namespace"]}.servicebus.windows.net/{settings.HybridConnection} ";
+                filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
+                Console.WriteLine($"{title}{filler}{MidSectionFiller}{publicEndpointUrl} {(char)29} {settings.TargetHttp}");
             }
         }
 
@@ -311,7 +313,7 @@ namespace NetPassage
         {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\n\r\n\r");
-            Console.WriteLine("Websocket Relay Requests");
+            Console.WriteLine("NetPassage Relay Requests");
             Console.WriteLine("__________________________");
             Console.WriteLine("\n\r");
         }
@@ -325,6 +327,19 @@ namespace NetPassage
         {
             ConnectionStatus = eventMessage;
             ShowAll();
+        }
+
+        /// <summary>
+        /// Converts string to TitleCase
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        static string ToTitleCase(string source)
+        {
+            // Creates a TextInfo based on the "en-US" culture.
+            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+
+            return textInfo.ToTitleCase(source);
         }
     }
 }
