@@ -168,6 +168,15 @@ var server = https.createRelayedServer(
                         statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
                     };
                     addLog(relayResponse.requestId, log);
+                    if (e.response != null) {
+                        setHeaders(relayResponse, e.response.headers);
+                        const data = formatData(e.response.headers, e.response.data);
+                        relayResponse.statusCode = e.response.status;
+                        relayResponse.end(data);
+                    }
+                    else {
+                        relayResponse.end();
+                    }
                 });
             });
         } else {
@@ -191,6 +200,15 @@ var server = https.createRelayedServer(
                     statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
                 };
                 addLog(relayResponse.requestId, log);
+                if (e.response != null) {
+                    setHeaders(relayResponse, e.response.headers);
+                    const data = formatData(e.response.headers, e.response.data);
+                    relayResponse.statusCode = e.response.status;
+                    relayResponse.end(data);
+                }
+                else {
+                    relayResponse.end();
+                }
             });
         }
     });
