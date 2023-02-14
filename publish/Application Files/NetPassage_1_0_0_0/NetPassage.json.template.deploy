@@ -1,0 +1,18 @@
+{
+  "Relay": {
+    "Namespace": "<Azure Relay namespace>",
+    "ConnectionSettings": [
+      {
+        "HybridConnection": "<Hybrid Connection Name>",
+        "PolicyName": "<Hybrid Connection Policy Name>",
+        "PolicyKey": "<Hybrid Connection Policy Key>",
+        "TargetHttp": "<Target URL>, e.g. http://localhost:3978"
+      },
+      {
+        <Copy the exact structure from the above and update the properties with the appropriate Hybrid Connection settings>
+      }
+    ]
+  }
+}
+
+
