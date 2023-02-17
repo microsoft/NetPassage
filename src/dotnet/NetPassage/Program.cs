@@ -281,12 +281,12 @@ namespace NetPassage
         /// </summary>
         static void ShowConfiguration()
         {
-            var relayNamespace = $"sb://{RelayNamespace}.servicebus.windows.net";
+            var relayNamespace = RelayNamespace.Substring(0, RelayNamespace.IndexOf(".servicebus"));
 
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"{LeftSectionFiller}{MidSectionFiller}(Ctrl+C to quit)");
+            Console.WriteLine($"{LeftSectionFiller}{MidSectionFiller} (Ctrl+C to quit)");
             Console.ForegroundColor = ConsoleColor.Green;
-            var title = "Session Status";
+            var title = "Session Status       ";
             var filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
             Console.WriteLine($"{title}{filler}{MidSectionFiller}{ConnectionStatus}");
 
@@ -295,12 +295,17 @@ namespace NetPassage
             filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
             Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}");
 
-            title = "Websocket to Http Forwarding";
+            title = "Forwarding           ";
             filler = string.Empty.PadRight(LeftSectionFiller.Length - title.Length > 0 ? LeftSectionFiller.Length - title.Length : 0);
 
             foreach (var settings in ConnectionSettingsCollection)
             {
-                Console.WriteLine($"{title}{filler}{MidSectionFiller}{relayNamespace}/{settings.HybridConnection} {(char)29} {settings.TargetHttp}");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write($"{title}{filler}{MidSectionFiller}https://{RelayNamespace}/{settings.HybridConnection}");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write(" --> ");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine(settings.TargetHttp);
             }
         }
 
@@ -311,8 +316,8 @@ namespace NetPassage
         {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\n\r\n\r");
-            Console.WriteLine("Websocket Relay Requests");
-            Console.WriteLine("__________________________");
+            Console.WriteLine("NetPassage Relay Connections");
+            Console.WriteLine("_____________________________");
             Console.WriteLine("\n\r");
         }
 
