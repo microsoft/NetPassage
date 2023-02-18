@@ -1,14 +1,20 @@
 # Overview
 
-**NetPassage** is a secure, open-protocol utility that enhances the existing Azure Relay features that allow exposing any web server or Bot application running on your local machine to the internet service, such as Microsoft Teams or any cloud based web applications. This tool is built with the latest .NET Core 6.0 platform and can be installed and run on any platform that have a basic WebSocket capability. **NetPassage** is based on HTTP and WebSockets. It does not have any dependency on WCF.
+This repository contains DotNet and NodeJs (both Typescript and Javascript) packages and samples for the Microsoft **NetPassage** tunneling utility that leverages Hybrid Connections feature of the Microsoft Azure Relay to establish bi-directional, binary stream communication between two networked applications, whereby either or both of the parties can reside behind NATs or Firewalls. **NetPassage** supports HTTP(S) and WebSockets. **NetPassage** is a great alternative to ngrok.io tunneling service.
 
-**NetPassage** supports network load balancing without the need of additional appliance. As the Relay resides at the cloud environment, we can have multiple listeners and the Network will be load balanced based on round robin fashion and you get a secured connectivity without requiring any external VPN. Additionally, **NetPassage** has also ability to listen simultenously to multiple client connections on a single hybrid connection, but the total number of listeners is limited to 25 listeners. Therefore you are only limited to the maximum number of hybrid connections you can add to your Azure Relay Namespace.
+**NetPassage** supports network load balancing without the need of additional appliance. As the Relay resides at the cloud environment, we can have multiple listeners and the Network will be load balanced based on round robin fashion and you get a secured connectivity without requiring any external VPN.
 
-Altogether, an interesting thing is that it is hybrid and supports cross platform which can run on Windows, Linux, .Net Platform, Java, Node.js etc.
+**NetPassage** supports cross platform deployment which includes Windows, Mac and Linux.
 
-This client side utility supports both `Http(s)` and `WebSocket` connectivity with the cloud based Relay.
+**NetPassage** allows a publicly discoverable and reachable WebSocket server to be hosted on any machine that has outbound access to the Internet, and specifically to the Microsoft Azure Relay service in the chosen region, via HTTPS port 443.
 
 It is useful for debug scenarios or for more complex situations where the BotEmulator is not enough (i.e.: you use the WebChat control hosted on a site and you need to receive ChannelData in your requests).
+
+The WebSocket server code for NodeJS version **NetPassage** will look instantly familiar as it is directly based on and integrated with two of the most popular existing WebSocket packages in the Node universe: **ws** and **websocket**.
+
+As you create a WebSocket server, the server will not listen on a TCP port on the local network, but rather delegate listening to a configured Hybrid Connection path the Azure Relay service in Service Bus. The delegation happens by ways of opening and maintaining a "control connection" WebSocket that remains opened and reconnects automatically when dropped inadvertently. This listener connection is automatically TLS/SSL protected without you having to juggle any certificates.
+
+Up to 25 WebSocket listeners can listen concurrently on the same Hybrid Connection path on the Relay; if two or more listeners are connected, the service will automatically balance incoming connection requests across the connected listeners which also provides an easy failover capability. You don't have to do anything to enable this, just have multiple listeners share the same path.
 
 When you start `NetPassage`, it will display a UI in your terminal with the public URL of your tunnel and other status and metrics information about connections made over your tunnel.
 
