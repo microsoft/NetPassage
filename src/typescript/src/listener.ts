@@ -1,26 +1,26 @@
 /* eslint-disable max-len */
-import https from "hyco-https";
-import axios, { AxiosError } from "axios";
-import colors from "colors";
-import DisplayLog from "./models/displaylog";
-import * as config from "./config/netPassage.json";
-import RelayConfig from "./models/relayConfig";
-import { exit } from "process";
+import https from 'hyco-https';
+import axios, { AxiosError } from 'axios';
+import colors from 'colors';
+import DisplayLog from './models/displaylog';
+import * as config from './config/netPassage.json';
+import RelayConfig from './models/relayConfig';
+import { exit } from 'process';
 
 colors.enable();
 
-const azureRelayDomain = "servicebus.windows.net";
+const azureRelayDomain = 'servicebus.windows.net';
 
 type LogRecord = Record<keyof DisplayLog, string>;
 
 // ONLY IN DEVELOPMENT!!!
-if (config.NodeEnv === "Development") {
+if (config.NodeEnv === 'Development') {
   const httpsAgent = new https.Agent({
     rejectUnauthorized: false,
   });
   axios.defaults.httpsAgent = httpsAgent;
   // eslint-disable-next-line no-console
-  console.log(config.NodeEnv, `RejectUnauthorized is disabled.`);
+  console.log(config.NodeEnv, 'RejectUnauthorized is disabled.');
 }
 
 // construct Relay Config settings from the configuration JSON file
@@ -41,7 +41,7 @@ if (azureRelayConfig.length === 0) {
   // eslint-disable-next-line max-len
   console.log(
     colors.red(
-      "Either configuration file is missing or the configuration settings could not be properly read",
+      'Either configuration file is missing or the configuration settings could not be properly read',
     ),
   );
   exit;
@@ -63,9 +63,9 @@ const displayHeader = (configs: RelayConfig[]): void => {
   const displayHeaders: string[] = [];
   console.clear();
   displayHeaders.push(
-    `${colors.green("NetPassage")} by ${colors.green("Microsoft")}`,
+    `${colors.green('NetPassage')} by ${colors.green('Microsoft')}`,
   );
-  displayHeaders.push(`${colors.green("Version: 1.0.0")}\n`);
+  displayHeaders.push(`${colors.green('Version: 1.0.0')}\n`);
   displayHeaders.push(
     `Azure Relay Namespace:\t\t ${colors.green(configs[0].namespace)}`,
   );
@@ -73,15 +73,15 @@ const displayHeader = (configs: RelayConfig[]): void => {
   configs.forEach((config) => {
     const relayPath = `https://${config.namespace}.${azureRelayDomain}/${config.path}`;
     displayHeaders.push(
-      `Forwarding:           \t\t ${relayPath} ${colors.green("-->")} ${
+      `Forwarding:           \t\t ${relayPath} ${colors.green('-->')} ${
         config.targetHttp
       }`,
     );
   });
-  displayHeaders.push("\n");
+  displayHeaders.push('\n');
 
-  displayHeaders.push("NetPassage Relay Requests");
-  displayHeaders.push("--------------------------");
+  displayHeaders.push('NetPassage Relay Requests');
+  displayHeaders.push('--------------------------');
 
   displayHeaders.forEach((headerLine) => {
     console.log(headerLine);
@@ -92,18 +92,18 @@ const displayHeader = (configs: RelayConfig[]): void => {
 const MAX_CONTENT_TO_DISPLAY = 40;
 const getLogMessage = (log: LogRecord): string => {
   let statusMessage = `${log.method}\t${log.path}\t`;
-  const statusCode = Number.parseInt(log.statusCode ?? "0");
+  const statusCode = Number.parseInt(log.statusCode ?? '0');
   const contentLength = `${
     log.contentLength.length > 0
       ? // eslint-disable-next-line max-len
-        `${colors.white("[Content-Length:")} ${colors.green(
+        `${colors.white('[Content-Length:')} ${colors.green(
           log.contentLength,
-        )}${colors.white("; Data:")} ${colors.green(
+        )}${colors.white('; Data:')} ${colors.green(
           JSON.stringify(log.data.substring(0, MAX_CONTENT_TO_DISPLAY)),
         )}${colors.white(
-          `${log.data.length > MAX_CONTENT_TO_DISPLAY ? "..." : ""}]`,
+          `${log.data.length > MAX_CONTENT_TO_DISPLAY ? '...' : ''}]`,
         )}`
-      : ""
+      : ''
   }`;
 
   if (statusCode >= 500) {
@@ -128,16 +128,17 @@ const maxLogs = process.env.MAX_LOGS ?? 20;
 // Add display log record into the Logs dictionary with the message Id as a key
 const addLog = (log: LogRecord): LogRecord => {
   // Return back if statusCode is empty
-  if (log.statusCode === "" || log.id === undefined) return log;
+  if (log.statusCode === '' || log.id === undefined) return log;
 
   // if the data was not modified (e.g. HTTP Status Code == 304, return the last record with the same path)
-  if (log.statusCode === "304") {
-    const lastRecord = logs.filter((l) => l.path === log.path).pop()!;
+  if (log.statusCode === '304') {
+    const lastRecord = logs.filter((l) => l.path === log.path).pop();
+    if (lastRecord === null || lastRecord === undefined) return log;
     logs.push(lastRecord);
     return lastRecord;
   }
 
-  if (log.id !== "" && logs.find((l) => l.id === log.id) !== undefined) {
+  if (log.id !== '' && logs.find((l) => l.id === log.id) !== undefined) {
     // the log record with the same Id found, replace it
     logs = logs.map((item) => {
       return item.id === log.id ? log : item;
@@ -168,25 +169,27 @@ const setHeaders = (relayResponse, headers) => {
   const keys = Object.keys(headers);
   keys.forEach((header) => {
     switch (header) {
-      case "transfer-encoding":
-      case "keep-alive":
+      case 'transfer-encoding':
+      case 'keep-alive': {
         break;
-      default:
+      }
+      default: {
         const value = headers[header];
         if (value) relayResponse.setHeader(header, value);
         break;
+      }
     }
   });
 
   // To support Web page rendering
-  relayResponse.setHeader("content-type", "text/html; charset=UTF-8");
+  relayResponse.setHeader('content-type', 'text/html; charset=UTF-8');
 };
 
 // Format data
 const formatData = (headers, data) => {
-  const contentType = headers["content-type"];
+  const contentType = headers['content-type'];
   switch (contentType) {
-    case "application/json":
+    case 'application/json':
       return JSON.stringify(data);
     default:
       return data;
@@ -222,32 +225,32 @@ azureRelayConfig.forEach((config) => {
         ),
     },
     async (relayRequest, relayResponse) => {
-      const endpointPath = relayRequest.url.replace(`/${config.path}`, "");
+      const endpointPath = relayRequest.url.replace(`/${config.path}`, '');
       const localServerEndpoint = `${config.targetHttp}${endpointPath}`;
 
       const log: LogRecord = {
         id: relayResponse.requestId,
         method: relayRequest.method,
         path: relayRequest.url,
-        statusCode: "",
-        statusText: "",
-        contentLength: "",
-        data: "",
-        headers: "",
+        statusCode: '',
+        statusText: '',
+        contentLength: '',
+        data: '',
+        headers: '',
       };
       addLog(log);
 
       // Process data
       try {
-        relayRequest.setEncoding("utf8");
+        relayRequest.setEncoding('utf8');
         const headers = relayRequest.headers;
-        if (relayRequest.method === "POST") {
-          let rawData = "";
+        if (relayRequest.method === 'POST') {
+          let rawData = '';
           // wait for all of the data to be received from a post
-          relayRequest.on("data", (chunk) => {
+          relayRequest.on('data', (chunk) => {
             rawData += chunk;
           });
-          relayRequest.on("end", async () => {
+          relayRequest.on('end', async () => {
             // parse the relayRequest body
             const parsedData = JSON.parse(rawData);
             try {
@@ -265,16 +268,17 @@ azureRelayConfig.forEach((config) => {
                 path: relayRequest.url,
                 statusCode: response.status.toString(),
                 statusText: response.statusText,
-                contentLength: parsedData.text
-                  ? parsedData?.text?.length?.toString()
-                  : parsedData?.length.toString(),
-                data: parsedData.text ?? parsedData,
+                contentLength:
+                  parsedData.text !== undefined
+                    ? parsedData?.text?.length?.toString()
+                    : JSON.stringify(parsedData).length.toString(),
+                data: parsedData.text ?? JSON.stringify(parsedData),
                 headers: relayResponse.getHeaders(),
               };
               addLog(log);
 
               // if the response is empty, return the relayResponse
-              if (response.data === "") return relayResponse.end();
+              if (response.data === '') return relayResponse.end();
 
               // copy the data from the local server to the relay response
               setHeaders(relayResponse, response.headers);
@@ -288,12 +292,12 @@ azureRelayConfig.forEach((config) => {
                 statusCode:
                   error.response !== undefined
                     ? error.response.status.toString()
-                    : "502",
+                    : '502',
                 statusText:
                   error.response !== undefined
                     ? error.response.statusText
-                    : "Bad Gateway",
-                contentLength: relayResponse.data?.length?.toString() ?? "",
+                    : 'Bad Gateway',
+                contentLength: relayResponse.data?.length?.toString() ?? '',
                 data: relayResponse.data,
                 headers: relayResponse.getHeaders(),
               };
@@ -324,7 +328,7 @@ azureRelayConfig.forEach((config) => {
               path: relayRequest.url,
               statusCode: response.status.toString(),
               statusText: response.statusText,
-              contentLength: data.length?.toString() ?? "",
+              contentLength: data.length?.toString() ?? '',
               data: data,
               headers: relayResponse.getHeaders(),
             };
@@ -337,12 +341,12 @@ azureRelayConfig.forEach((config) => {
               statusCode:
                 error.response !== undefined
                   ? error.response.status.toString()
-                  : "502",
+                  : '502',
               statusText:
                 error.response !== undefined
                   ? error.response.statusText
-                  : "Bad Gateway",
-              contentLength: relayResponse.data?.length?.toString() ?? "",
+                  : 'Bad Gateway',
+              contentLength: relayResponse.data?.length?.toString() ?? '',
               data: relayResponse.data,
               headers: relayResponse.getHeaders(),
             };
@@ -357,20 +361,20 @@ azureRelayConfig.forEach((config) => {
         }
       } catch (error) {
         const log: LogRecord = {
-          id: "",
+          id: '',
           method: relayRequest.method,
           path: relayRequest.url,
           statusCode:
             error.response !== undefined
               ? error.response.status.toString()
-              : "502",
+              : '502',
           statusText:
             error.response !== undefined
               ? error.response.statusText
-              : "Bad Gateway",
-          contentLength: "",
-          data: "",
-          headers: "",
+              : 'Bad Gateway',
+          contentLength: '',
+          data: '',
+          headers: '',
         };
         addLog(log);
       }
@@ -382,12 +386,12 @@ azureRelayConfig.forEach((config) => {
 
   server.listen((err) => {
     if (err) {
-      return console.log("something bad happened", err);
+      return console.log('something bad happened', err);
     }
     console.log(`server is listening on ${process.env.targetHttp}`);
   });
 
-  server.on("error", (err) => {
-    console.log("error: " + err.message);
+  server.on('error', (err) => {
+    console.log('error: ' + err.message);
   });
 });
