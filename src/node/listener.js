@@ -8,7 +8,7 @@ colors.enable();
 const ENV_FILE = path.join(__dirname, '.env');
 require('dotenv').config({ path: ENV_FILE });
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'Development') {
     const httpsAgent = new https.Agent({
         rejectUnauthorized: false,
     })
@@ -57,11 +57,11 @@ const getLogMessage = (msg) => {
 }
 
 let logKeys = [];
-let logs = {};
+let logs = [];
 const maxLogs = 10;
 
 const addLog = (id, log) => {
-    if (logs[id] == undefined) {
+    if (logs[id] === undefined) {
         // if it doesn't exist add it
         logKeys.push(id);    
     }
@@ -136,7 +136,7 @@ var server = https.createRelayedServer(
         //addLog(relayRequest.method + "\t" + relayRequest.url);
         relayRequest.setEncoding('utf8');
         let headers = relayRequest.headers;
-        if (relayRequest.method == 'POST') {
+        if (relayRequest.method === 'POST') {
             let rawData = '';
             // wait for all of the data to be received from a post
             relayRequest.on('data', (chunk) => { rawData += chunk; });
@@ -154,7 +154,7 @@ var server = https.createRelayedServer(
                         };
                         addLog(relayResponse.requestId, log);
                         // if the response is empty, return the relayResponse
-                        if (response.data == '') return relayResponse.end();
+                        if (response.data === '') return relayResponse.end();
 
                         // copy the data from the local server to the relay response
                         setHeaders(relayResponse, response.headers);
@@ -164,8 +164,8 @@ var server = https.createRelayedServer(
                     const log = {
                         method: relayRequest.method,
                         path: relayRequest.url,
-                        statusCode: e.response != undefined ? e.response.status : '502',
-                        statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
+                        statusCode: e.response !== undefined ? e.response.status : '502',
+                        statusText: e.response !== undefined ? e.response.statusText : 'Bad Gateway'
                     };
                     addLog(relayResponse.requestId, log);
                 });
@@ -187,8 +187,8 @@ var server = https.createRelayedServer(
                 const log = {
                     method: relayRequest.method,
                     path: relayRequest.url,
-                    statusCode: e.response != undefined ? e.response.status : '502',
-                    statusText: e.response != undefined ? e.response.statusText : 'Bad Gateway'
+                    statusCode: e.response !== undefined ? e.response.status : '502',
+                    statusText: e.response !== undefined ? e.response.statusText : 'Bad Gateway'
                 };
                 addLog(relayResponse.requestId, log);
             });
