@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : NetPassage.exe
 // Author           : Danny Garber
 // Created          : 07-22-2021
@@ -316,7 +316,6 @@ namespace NetPassage
         {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\n\r\n\r");
-
             Console.WriteLine("NetPassage Relay Requests");
             Console.WriteLine("__________________________");
             Console.WriteLine("\n\r");
