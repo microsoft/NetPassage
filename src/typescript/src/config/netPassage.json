@@ -1,0 +1,20 @@
+{
+  "NodeEnv": "Development",
+  "Relay": {
+    "Namespace": "<yourRelayNamespace>",
+    "ConnectionSettings": [
+      {
+        "HybridConnection": "<Name of the the Hybrid Connection 1>",
+        "PolicyName": "<SAS POLICY NAME 1>",
+        "PolicyKey": "<POLICY KEY 1>",
+        "TargetHttp": "http://localhost:<YOUR TARGET PORT 1>"
+      },
+      {
+        "HybridConnection": "<Name of the the Hybrid Connection 2>",
+        "PolicyName": "<SAS POLICY NAME 2>",
+        "PolicyKey": "<POLICY KEY 2>",
+        "TargetHttp": "http://localhost:<YOUR TARGET PORT 2>"
+      }
+    ]
+  }
+}

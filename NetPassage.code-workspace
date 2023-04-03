@@ -1,0 +1,43 @@
+{
+	"folders": [
+		{
+			"name": "NetPassage (Typescript)",
+			"path": "src/typescript"
+		},
+		{
+			"name": "NetPassage (Javascript)",
+			"path": "src/node"
+		},
+		{
+			"name": "NetPassage (DotNet)",
+			"path": "src/dotnet"
+		},
+		{
+			"name": "Samples/Node/HelloWorld",
+			"path": "samples/node/helloWorld"
+		},
+		{
+			"name": "Samples/DotNet/HCReverseProxy",
+			"path": "samples/dotnet/hcreverseproxy"
+		},
+		{
+			"name": "Samples/DotNet/Teams-Conversation-Bot",
+			"path": "samples/dotnet/teams-conversation-bot"
+		},
+		{
+			"name": "Samples/DotNet/Teams-Messaging-Extensions-Action",
+			"path": "samples/dotnet/teams-messaging-extensions-action"
+		}
+	],
+	"settings": {
+		"jest.disabledWorkspaceFolders": [
+			"Samples/DotNet/Teams-Conversation-Bot",
+			"NetPassage (Typescript)",
+			"NetPassage (DotNet)",
+			"NetPassage (Javascript)",
+			"Samples/Node/HelloWorld",
+			"Samples/DotNet/Teams-Messaging-Extensions-Action",
+			"Samples/DotNet/HCReverseProxy"
+		]
+	}
+}
