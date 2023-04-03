@@ -110,7 +110,11 @@ the local target server will be returned to the relay response.
 ### Install
 
 - Install ['Node'](https://nodejs.org/en/download/)
-- Install the pacakges - npm install 
+- Install the pacakges - npm install
+
+### Deploy
+
+[Publish NetPassage](publish/Publish.html)
 
 ### Usage
 

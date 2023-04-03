@@ -316,6 +316,7 @@ namespace NetPassage
         {
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\n\r\n\r");
+
             Console.WriteLine("NetPassage Relay Requests");
             Console.WriteLine("__________________________");
             Console.WriteLine("\n\r");
