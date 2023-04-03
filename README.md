@@ -33,8 +33,20 @@ shown in the architecture diagram below:
 
 The `NetPassage` utility is constructed from the following parts:
 
-1. NetPassage client console app
-2. Microsoft.HybridConnections.Core - the library containing the common modules and services used by NetPassage
+1. Azure Relay service deployed to Azure
+2. NetPassage client console app
+3. Microsoft.HybridConnections.Core - the library containing the common modules and services used by NetPassage
+
+### Deploying Azure Relay Service for NetPassage
+
+In order to deploy Azure Relay service to host NetPassage hybrid connections, you can follow these steps:
+
+1. Create a Relay namespace by using the Azure portal. For detailed steps, follow this [guidance](https://learn.microsoft.com/en-us/azure/azure-relay/relay-create-namespace-portal)
+1. Create a hybrid connection in that namespace by using the Azure portal. For detailed steps, follow this [guidance](https://learn.microsoft.com/en-us/azure/azure-relay/relay-hybrid-connections-dotnet-get-started#create-a-hybrid-connection)
+
+>IMPORTANT! When creating a hybrid connection, leave the `Requires Client Authorization` checkbox off. This is required for NetPassage tunneling to work in Microsoft Teams environment.
+
+1. Create `Shared access policies` for all your hybrid connections (if more than one is required) and save the policy name and the key to be used later when configuring `NetPassage.json` properties.
 
 ### Building with Microsoft Visual Studio 2019 or higher
 
@@ -54,7 +66,7 @@ The `NetPassage` utility is constructed from the following parts:
 
 4. Clone the **appsettings.json.template** file into **appsettings.json** and change the value of the `Verbose` in the `Log` section to be either `false` or `true` if you want to have a verbose output of all outgoing message. The latter is helpful only for troubleshooting and debugging purposes.
 
-5. Before building the solution, please make sure to change the `Build Action` for `NetPassage.json` file to `Content`.
+5. Before building the solution, please make sure to change the `Build Action` for `NetPassage.json` file to `Content`. Also, make sure the `Copy to Output Directory` property is set to `Copy if newer` for both files, `NetPassage.json` and `appsettings.json`.
 
 Then, before running `NetPassage` with your Bot application that installed, for example, within the Microsoft Teams application, make sure to update the Bot's `Messaging Endpoint` to your `NetPassage` Hybrid Connection Url. To do so, follow these steps:
 
@@ -110,7 +122,7 @@ the local target server will be returned to the relay response.
 ### Install
 
 - Install ['Node'](https://nodejs.org/en/download/)
-- Install the pacakges - npm install
+- Install the packages - npm install
 
 ### Deploy
 
@@ -127,5 +139,3 @@ the local target server will be returned to the relay response.
 ## Acknowledgments
 
 Part of this code is based on the work that [Gabo Gilabert](https://github.com/gabog) did in his project [here](https://github.com/gabog/AzureServiceBusBotRelay).
-
-
